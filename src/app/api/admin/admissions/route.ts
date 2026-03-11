@@ -62,7 +62,7 @@ export async function PATCH(req: Request) {
   const nextSemesterFees = semesterFeesProvided ? parsed.data.semester_fees ?? [] : existing.semester_fees ?? [];
   const feeTotals = semesterFeesProvided
     ? nextSemesterFees.reduce(
-        (acc, row) => ({
+        (acc: { paid: number; due: number }, row: { paid?: number | null; due?: number | null }) => ({
           paid: acc.paid + (row.paid ?? 0),
           due: acc.due + (row.due ?? 0),
         }),

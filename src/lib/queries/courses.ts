@@ -270,13 +270,14 @@ export async function getCourses(): Promise<Course[]> {
   if (!isSupabaseConfigured()) return mockData.courses;
 
   const supabase = createClient();
-  const { data, error } = await fetchAllRows<Course>((from, to) =>
-    supabase
+  const { data, error } = await fetchAllRows<Course>(async (from, to) => {
+    const { data: rows, error } = await supabase
       .from("courses")
       .select("*, sector:course_sectors(*), mode:education_modes(*)")
       .order("name", { ascending: true })
-      .range(from, to),
-  );
+      .range(from, to);
+    return { data: rows, error };
+  });
 
   if (error || !data) return mockData.courses;
   return data;
@@ -328,13 +329,14 @@ export async function getCourseListings(filters: CourseFilters = {}): Promise<Co
       const { data: university } = await supabase.from("universities").select("id").eq("slug", filters.university).maybeSingle();
 
       if (university) {
-        const { data: links, error } = await fetchAllRows<{ course_id: string }>((from, to) =>
-          supabase
+        const { data: links, error } = await fetchAllRows<{ course_id: string }>(async (from, to) => {
+          const { data: rows, error } = await supabase
             .from("university_courses")
             .select("course_id")
             .eq("university_id", university.id)
-            .range(from, to),
-        );
+            .range(from, to);
+          return { data: rows, error };
+        });
         allowedCourseIds = error ? new Set() : new Set((links ?? []).map((row) => row.course_id));
       } else {
         allowedCourseIds = new Set();
@@ -398,30 +400,34 @@ export async function getCourseListings(filters: CourseFilters = {}): Promise<Co
 async function getCourseListingsFromDb(): Promise<CourseListing[]> {
   const supabase = createClient();
   const [coursesResp, linksResp, studentsResp, ratingsResp] = await Promise.all([
-    fetchAllRows<Course>((from, to) =>
-      supabase
+    fetchAllRows<Course>(async (from, to) => {
+      const { data: rows, error } = await supabase
         .from("courses")
         .select("*, sector:course_sectors(*), mode:education_modes(*)")
-        .range(from, to),
-    ),
-    fetchAllRows<{ course_id: string; university_id: string; fees: number }>((from, to) =>
-      supabase
+        .range(from, to);
+      return { data: rows, error };
+    }),
+    fetchAllRows<{ course_id: string; university_id: string; fees: number }>(async (from, to) => {
+      const { data: rows, error } = await supabase
         .from("university_courses")
         .select("course_id, university_id, fees")
-        .range(from, to),
-    ),
-    fetchAllRows<{ course_id: string; student_count: number }>((from, to) =>
-      supabase
+        .range(from, to);
+      return { data: rows, error };
+    }),
+    fetchAllRows<{ course_id: string; student_count: number }>(async (from, to) => {
+      const { data: rows, error } = await supabase
         .from("students")
         .select("course_id, student_count")
-        .range(from, to),
-    ),
-    fetchAllRows<{ course_id: string; rating: number; review_count: number }>((from, to) =>
-      supabase
+        .range(from, to);
+      return { data: rows, error };
+    }),
+    fetchAllRows<{ course_id: string; rating: number; review_count: number }>(async (from, to) => {
+      const { data: rows, error } = await supabase
         .from("ratings")
         .select("course_id, rating, review_count")
-        .range(from, to),
-    ),
+        .range(from, to);
+      return { data: rows, error };
+    }),
   ]);
 
   if (!coursesResp.data || !linksResp.data) return getMockCourseListings();
