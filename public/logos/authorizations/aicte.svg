@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120">
+  <rect width="320" height="120" rx="14" fill="#fff7ed"/>
+  <rect x="14" y="14" width="292" height="92" rx="10" fill="#ea580c"/>
+  <text x="160" y="55" text-anchor="middle" font-size="30" fill="white" font-family="Segoe UI, Arial" font-weight="700">AICTE</text>
+  <text x="160" y="80" text-anchor="middle" font-size="14" fill="#ffedd5" font-family="Segoe UI, Arial">APPROVAL REFERENCE</text>
+</svg>

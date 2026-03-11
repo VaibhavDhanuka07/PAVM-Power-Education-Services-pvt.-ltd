@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="grad-subharti-university-1" x1="0" y1="0" x2="1600" y2="1000" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="hsl(179, 75%, 16%)"/>
+      <stop offset="0.5" stop-color="hsl(213, 78%, 32%)"/>
+      <stop offset="1" stop-color="hsl(257, 84%, 58%)"/>
+    </linearGradient>
+    <radialGradient id="glow-subharti-university-1" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(1184 240) rotate(128) 768 480">
+      <stop stop-color="hsl(304, 84%, 64%)" stop-opacity="0.52"/>
+      <stop offset="1" stop-color="hsl(304, 84%, 64%)" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1600" height="1000" rx="48" fill="url(#grad-subharti-university-1)"/>
+  <rect width="1600" height="1000" rx="48" fill="url(#glow-subharti-university-1)"/>
+  <rect x="64" y="80" width="1472" height="840" rx="40" fill="white" fill-opacity="0.06"/>
+  <path d="M -80 780 C 320 650, 560 920, 1040 760 C 1376 660, 1632 840, 1760 700 L 1760 1000 L -80 1000 Z" fill="hsl(195, 82%, 90%)" fill-opacity="0.16"/>
+  <circle cx="192" cy="180" r="80" fill="hsl(195, 82%, 90%)" fill-opacity="0.2"/>
+  <circle cx="1408" cy="860" r="120" fill="hsl(304, 84%, 64%)" fill-opacity="0.2"/>
+  <text x="112" y="170" fill="hsl(195, 82%, 90%)" fill-opacity="0.95" font-family="Poppins, Inter, Arial, sans-serif" font-size="34" font-weight="700" letter-spacing="1.4">
+    PAVM CAMPUS MEDIA
+  </text>
+  <text x="112" y="520" fill="white" font-family="Poppins, Inter, Arial, sans-serif" font-size="96" font-weight="800">
+    Subharti University
+    
+  </text>
+  <text x="112" y="780" fill="hsl(195, 82%, 90%)" font-family="Poppins, Inter, Arial, sans-serif" font-size="54" font-weight="600">
+    Campus Life
+  </text>
+  <text x="112" y="860" fill="hsl(195, 82%, 90%)" fill-opacity="0.94" font-family="Poppins, Inter, Arial, sans-serif" font-size="40" font-weight="500">
+    Distinct university-wise placeholder visuals
+  </text>
+</svg>

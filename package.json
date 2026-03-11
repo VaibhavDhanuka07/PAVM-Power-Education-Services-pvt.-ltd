@@ -1,0 +1,47 @@
+{
+  "name": "pavm-platform",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev:reset",
+    "dev:fast": "next dev -p 3000",
+    "dev:clean": "node scripts/dev-clean.mjs --port=3000 --next && next dev -p 3000",
+    "dev:reset": "node scripts/dev-clean.mjs --port=3000 --next --cache && next dev -p 3000",
+    "clean": "node scripts/dev-clean.mjs --next --cache",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "lint": "next lint",
+    "media:generate": "node scripts/generate-university-media-placeholders.mjs",
+    "seed:supabase": "node scripts/seed-supabase.mjs"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@supabase/ssr": "^0.9.0",
+    "@supabase/supabase-js": "^2.98.0",
+    "@tanstack/react-query": "^5.90.21",
+    "@tanstack/react-query-devtools": "^5.91.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.34.5",
+    "lucide-react": "^0.576.0",
+    "next": "^14.2.33",
+    "next-themes": "^0.4.6",
+    "pg": "^8.13.1",
+    "react": "^18",
+    "react-dom": "^18",
+    "react-hook-form": "^7.71.2",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.27",
+    "eslint": "^8",
+    "eslint-config-next": "^14.2.33",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
