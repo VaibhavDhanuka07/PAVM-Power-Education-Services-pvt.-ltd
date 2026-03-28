@@ -8,13 +8,18 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { University } from "@/lib/types";
-import { normalizeModeSlug, slugify } from "@/lib/utils";
+import { normalizeModeSlug } from "@/lib/utils";
 
 type Props = {
   sectors: string[];
   modes: string[];
   universities: University[];
   durations: string[];
+  courseOptions: Array<{
+    slug: string;
+    name: string;
+    modeName: string;
+  }>;
 };
 
 function labelize(value: string) {
@@ -24,7 +29,7 @@ function labelize(value: string) {
     .join(" ");
 }
 
-export function CourseFilters({ sectors, modes, universities, durations }: Props) {
+export function CourseFilters({ sectors, modes, universities, durations, courseOptions }: Props) {
   const params = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -32,6 +37,7 @@ export function CourseFilters({ sectors, modes, universities, durations }: Props
   const values = useMemo(
     () => ({
       search: params.get("search") ?? "",
+      course: params.get("course") ?? "",
       sector: params.get("sector") ?? "",
       mode: params.get("mode") ?? "",
       university: params.get("university") ?? "",
@@ -58,6 +64,11 @@ export function CourseFilters({ sectors, modes, universities, durations }: Props
     );
   }, [draft.mode, universities]);
 
+  const availableCourseOptions = useMemo(() => {
+    if (!draft.mode) return courseOptions;
+    return courseOptions.filter((course) => normalizeModeSlug(course.modeName) === normalizeModeSlug(draft.mode));
+  }, [courseOptions, draft.mode]);
+
   useEffect(() => {
     if (!draft.university) return;
     const exists = availableUniversities.some((university) => university.slug === draft.university);
@@ -66,9 +77,18 @@ export function CourseFilters({ sectors, modes, universities, durations }: Props
     }
   }, [availableUniversities, draft.university]);
 
+  useEffect(() => {
+    if (!draft.course) return;
+    const exists = availableCourseOptions.some((course) => course.slug === draft.course);
+    if (!exists) {
+      setDraft((prev) => ({ ...prev, course: "" }));
+    }
+  }, [availableCourseOptions, draft.course]);
+
   function applyFilters() {
     const next = new URLSearchParams();
     if (draft.search.trim()) next.set("search", draft.search.trim());
+    if (draft.course) next.set("course", draft.course);
     if (draft.sector) next.set("sector", draft.sector);
     if (draft.mode) next.set("mode", draft.mode);
     if (draft.university) next.set("university", draft.university);
@@ -80,6 +100,7 @@ export function CourseFilters({ sectors, modes, universities, durations }: Props
   function resetFilters() {
     setDraft({
       search: "",
+      course: "",
       sector: "",
       mode: "",
       university: "",
@@ -102,62 +123,124 @@ export function CourseFilters({ sectors, modes, universities, durations }: Props
         Smart filters
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
-        <Input
-          placeholder="Search course or university"
-          value={draft.search}
-          onChange={(e) => setDraft((prev) => ({ ...prev, search: e.target.value }))}
-          className="h-11 rounded-xl border-slate-300 bg-white text-slate-900 placeholder:text-slate-500"
-        />
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Global Search</span>
+          <Input
+            placeholder="Search course, university, mode, or subject"
+            value={draft.search}
+            onChange={(e) => setDraft((prev) => ({ ...prev, search: e.target.value }))}
+            className="h-11 rounded-xl border-slate-300 bg-white text-slate-900 placeholder:text-slate-500"
+          />
+        </label>
 
-        <Select value={draft.sector} onChange={(e) => setDraft((prev) => ({ ...prev, sector: e.target.value }))} className="h-11 rounded-xl border-slate-300 bg-white text-slate-900">
-          <option value="">All sectors</option>
-          {sectors.map((sector) => <option key={sector} value={sector}>{labelize(sector)}</option>)}
-        </Select>
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Course Filter</span>
+          <Select
+            value={draft.course}
+            onChange={(e) => setDraft((prev) => ({ ...prev, course: e.target.value }))}
+            className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
+          >
+            <option value="">All courses</option>
+            {availableCourseOptions.map((course) => (
+              <option key={course.slug} value={course.slug}>
+                {course.name} | {course.modeName}
+              </option>
+            ))}
+          </Select>
+        </label>
 
-        <Select
-          value={draft.mode}
-          onChange={(e) =>
-            setDraft((prev) => {
-              const nextMode = e.target.value;
-              const normalized = normalizeModeSlug(nextMode);
-              const keepLevel = !normalized || ["online", "distance", "regular"].includes(normalized);
-              return {
-                ...prev,
-                mode: nextMode,
-                university: "",
-                level: keepLevel ? prev.level : "",
-              };
-            })
-          }
-          className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
-        >
-          <option value="">All modes</option>
-          {modes.map((mode) => <option key={mode} value={mode}>{labelize(mode)}</option>)}
-        </Select>
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Sector</span>
+          <Select
+            value={draft.sector}
+            onChange={(e) => setDraft((prev) => ({ ...prev, sector: e.target.value }))}
+            className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
+          >
+            <option value="">All sectors</option>
+            {sectors.map((sector) => (
+              <option key={sector} value={sector}>
+                {labelize(sector)}
+              </option>
+            ))}
+          </Select>
+        </label>
 
-        <Select
-          value={draft.university}
-          onChange={(e) => setDraft((prev) => ({ ...prev, university: e.target.value }))}
-          className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
-        >
-          <option value="">All universities</option>
-          {availableUniversities.map((university) => <option key={university.slug} value={university.slug}>{university.name}</option>)}
-        </Select>
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Mode</span>
+          <Select
+            value={draft.mode}
+            onChange={(e) =>
+              setDraft((prev) => {
+                const nextMode = e.target.value;
+                const normalized = normalizeModeSlug(nextMode);
+                const keepLevel = !normalized || ["online", "distance", "regular"].includes(normalized);
+                return {
+                  ...prev,
+                  mode: nextMode,
+                  university: "",
+                  level: keepLevel ? prev.level : "",
+                };
+              })
+            }
+            className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
+          >
+            <option value="">All modes</option>
+            {modes.map((mode) => (
+              <option key={mode} value={mode}>
+                {labelize(mode)}
+              </option>
+            ))}
+          </Select>
+        </label>
 
-        <Select value={draft.duration} onChange={(e) => setDraft((prev) => ({ ...prev, duration: e.target.value }))} className="h-11 rounded-xl border-slate-300 bg-white text-slate-900">
-          <option value="">Any duration</option>
-          {durations.map((duration) => <option key={duration} value={duration}>{duration}</option>)}
-        </Select>
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">University</span>
+          <Select
+            value={draft.university}
+            onChange={(e) => setDraft((prev) => ({ ...prev, university: e.target.value }))}
+            className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
+          >
+            <option value="">All universities</option>
+            {availableUniversities.map((university) => (
+              <option key={university.slug} value={university.slug}>
+                {university.name}
+              </option>
+            ))}
+          </Select>
+        </label>
+
+        <label className="space-y-1">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Duration</span>
+          <Select
+            value={draft.duration}
+            onChange={(e) => setDraft((prev) => ({ ...prev, duration: e.target.value }))}
+            className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
+          >
+            <option value="">Any duration</option>
+            {durations.map((duration) => (
+              <option key={duration} value={duration}>
+                {duration}
+              </option>
+            ))}
+          </Select>
+        </label>
 
         {showLevelFilter ? (
-          <Select value={draft.level} onChange={(e) => setDraft((prev) => ({ ...prev, level: e.target.value }))} className="h-11 rounded-xl border-slate-300 bg-white text-slate-900">
-            <option value="">Any level</option>
-            <option value="diploma">Diploma</option>
-            <option value="bachelors">Bachelors / Graduation</option>
-            <option value="pg-diploma">PG Diploma</option>
-            <option value="post-graduation">Post Graduation</option>
-          </Select>
+          <label className="space-y-1">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Level</span>
+            <Select
+              value={draft.level}
+              onChange={(e) => setDraft((prev) => ({ ...prev, level: e.target.value }))}
+              className="h-11 rounded-xl border-slate-300 bg-white text-slate-900"
+            >
+              <option value="">Any level</option>
+              <option value="diploma">Diploma</option>
+              <option value="bachelors">Bachelors / Graduation</option>
+              <option value="pg-diploma">PG Diploma</option>
+              <option value="post-graduation">Post Graduation</option>
+            </Select>
+          </label>
         ) : null}
       </div>
 

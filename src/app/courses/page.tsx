@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { SlidersHorizontal, Scale, Grid3X3 } from "lucide-react";
 import { buildMetadata } from "@/lib/seo";
-import { getCourseListings, getCourseSectors, getEducationModes } from "@/lib/queries/courses";
+import { getCourses, getCourseListings, getCourseSectors, getEducationModes } from "@/lib/queries/courses";
 import { getUniversities } from "@/lib/queries/universities";
 import { CourseFilters } from "@/components/forms/course-filters";
 import { CourseGrid } from "@/components/sections/course-grid";
@@ -27,6 +27,7 @@ export default async function CoursesPage({
     university?: string;
     duration?: string;
     search?: string;
+    course?: string;
     level?: string;
   };
 }) {
@@ -37,6 +38,7 @@ export default async function CoursesPage({
     if (searchParams.university) qp.set("university", searchParams.university);
     if (searchParams.duration) qp.set("duration", searchParams.duration);
     if (searchParams.search) qp.set("search", searchParams.search);
+    if (searchParams.course) qp.set("course", searchParams.course);
     if (searchParams.level) qp.set("level", searchParams.level);
     const query = qp.toString();
     return query ? `/courses?${query}` : "/courses";
@@ -45,12 +47,13 @@ export default async function CoursesPage({
   const vocationalListingsPromise =
     searchParams.mode === "vocational" ? getCourseListings({ ...searchParams, sector: undefined }) : Promise.resolve([]);
 
-  const [listings, universities, sectorsData, modesData, vocationalListings] = await Promise.all([
+  const [listings, universities, sectorsData, modesData, vocationalListings, allCourses] = await Promise.all([
     getCourseListings(searchParams),
     getUniversities(),
     getCourseSectors(),
     getEducationModes(),
     vocationalListingsPromise,
+    getCourses(),
   ]);
 
   const sectors = sectorsData.map((item) => item.slug);
@@ -59,6 +62,14 @@ export default async function CoursesPage({
   const promotedListings = [...listings]
     .sort((a, b) => b.review_count - a.review_count || b.average_rating - a.average_rating)
     .slice(0, 6);
+  const courseOptions = allCourses
+    .map((course) => ({
+      slug: course.slug,
+      name: course.name,
+      modeName: course.mode?.name ?? "Program",
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name) || a.modeName.localeCompare(b.modeName));
+  const courseOptionBySlug = new Map(courseOptions.map((course) => [course.slug, course]));
   const levelLabelMap: Record<string, string> = {
     diploma: "Diploma",
     bachelors: "Bachelors / Graduation",
@@ -71,6 +82,14 @@ export default async function CoursesPage({
     searchParams.sector ? ["Sector", searchParams.sector] : null,
     searchParams.duration ? ["Duration", searchParams.duration] : null,
     searchParams.search ? ["Search", searchParams.search] : null,
+    searchParams.course
+      ? [
+          "Course",
+          courseOptionBySlug.get(searchParams.course)
+            ? `${courseOptionBySlug.get(searchParams.course)!.name} | ${courseOptionBySlug.get(searchParams.course)!.modeName}`
+            : searchParams.course,
+        ]
+      : null,
     searchParams.level ? ["Level", levelLabelMap[searchParams.level] ?? searchParams.level] : null,
   ].filter((item): item is [string, string] => Boolean(item));
   const vocationalSectorSlugs = new Set(
@@ -196,7 +215,13 @@ export default async function CoursesPage({
           ) : null}
 
           <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-            <CourseFilters sectors={sectors} modes={modes} universities={universities} durations={durations} />
+            <CourseFilters
+              sectors={sectors}
+              modes={modes}
+              universities={universities}
+              durations={durations}
+              courseOptions={courseOptions}
+            />
             <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 shadow-inner md:p-5">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                 <p className="text-base font-semibold text-slate-800">All Courses Catalog</p>

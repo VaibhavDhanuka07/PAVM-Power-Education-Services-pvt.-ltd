@@ -11,6 +11,14 @@ const UNIVERSITY_MEDIA_ROOT = path.join(PUBLIC_ROOT, "universities-media");
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".webp", ".avif", ".svg"]);
 const VIDEO_EXTENSIONS = new Set([".mp4", ".webm", ".mov", ".m4v"]);
+const IMAGE_EXTENSION_PRIORITY: Record<string, number> = {
+  ".avif": 0,
+  ".webp": 1,
+  ".jpg": 2,
+  ".jpeg": 2,
+  ".png": 3,
+  ".svg": 4,
+};
 
 function toWebPath(absolutePath: string) {
   const relative = path.relative(PUBLIC_ROOT, absolutePath).replace(/\\/g, "/");
@@ -41,6 +49,9 @@ async function listMediaFiles(dirPath: string, extensions: Set<string>) {
       const bHero = bLower.includes("hero");
       if (aHero && !bHero) return -1;
       if (!aHero && bHero) return 1;
+      const aPriority = IMAGE_EXTENSION_PRIORITY[path.extname(aLower)] ?? 10;
+      const bPriority = IMAGE_EXTENSION_PRIORITY[path.extname(bLower)] ?? 10;
+      if (aPriority !== bPriority) return aPriority - bPriority;
       return a.localeCompare(b, undefined, { numeric: true });
     })
     .map((name) => toWebPath(path.join(dirPath, name)));

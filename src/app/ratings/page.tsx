@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Medal, Star, TrendingUp } from "lucide-react";
 import { buildMetadata } from "@/lib/seo";
+import { canonicalizeCourseName } from "@/lib/course-search";
 import { getCourses } from "@/lib/queries/courses";
 import { getRatings, getRatingSummary } from "@/lib/queries/ratings";
 import { RatingForm } from "@/components/forms/rating-form";
@@ -95,7 +96,9 @@ export default async function RatingsPage() {
                 </span>
               </div>
 
-              <p className="line-clamp-2 text-lg font-semibold text-slate-900">{rating.course?.name}</p>
+              <p className="line-clamp-2 text-lg font-semibold text-slate-900">
+                {rating.course?.name ? canonicalizeCourseName(rating.course.name) : ""}
+              </p>
               <div className="mt-2 flex items-center gap-2">
                 <Stars value={rating.rating} />
                 <span className="text-sm text-slate-600">{formatNumber(rating.review_count)} verified reviews</span>

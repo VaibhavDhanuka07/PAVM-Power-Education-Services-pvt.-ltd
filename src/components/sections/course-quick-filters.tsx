@@ -8,6 +8,7 @@ type SearchParams = {
   sector?: string;
   duration?: string;
   search?: string;
+  course?: string;
   level?: string;
 };
 
@@ -18,6 +19,7 @@ function buildHref(params: SearchParams) {
   if (params.sector) qp.set("sector", params.sector);
   if (params.duration) qp.set("duration", params.duration);
   if (params.search) qp.set("search", params.search);
+  if (params.course) qp.set("course", params.course);
   if (params.level) qp.set("level", params.level);
   const q = qp.toString();
   return q ? `/courses?${q}` : "/courses";

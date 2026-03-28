@@ -83,6 +83,7 @@ export type CourseListing = {
   course: Course;
   min_fees: number;
   university_count: number;
+  university_names?: string[];
   student_count: number;
   average_rating: number;
   review_count: number;

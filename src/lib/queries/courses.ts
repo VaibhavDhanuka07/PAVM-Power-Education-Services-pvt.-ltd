@@ -1,5 +1,6 @@
 import { getMockCourseListings, mockData } from "@/lib/mock-data";
 import { Course, CourseListing, UniversityCourse } from "@/lib/types";
+import { canonicalizeCourseName, matchesCourseSearch } from "@/lib/course-search";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { normalizeModeSlug, slugify } from "@/lib/utils";
 
@@ -9,6 +10,7 @@ type CourseFilters = {
   university?: string;
   duration?: string;
   search?: string;
+  course?: string;
   level?: string;
 };
 
@@ -50,6 +52,15 @@ async function fetchAllRows<T>(
   }
 
   return { data: all, error: null };
+}
+
+function normalizeCourseRecord(course: Course): Course {
+  const canonicalName = canonicalizeCourseName(course.name);
+  return canonicalName === course.name ? course : { ...course, name: canonicalName };
+}
+
+function matchesListingSearch(item: CourseListing, query: string) {
+  return matchesCourseSearch(item.course, query, { universityNames: item.university_names });
 }
 
 function normalizeCourseLevelFilter(value: string | undefined | null): CourseLevel | "" {
@@ -182,6 +193,7 @@ function collapseDomainListings(list: CourseListing[]) {
       },
       min_fees: Math.min(...items.map((it) => it.min_fees)),
       university_count: Math.max(...items.map((it) => it.university_count)),
+      university_names: Array.from(new Set(items.flatMap((it) => it.university_names ?? []))),
       student_count: items.reduce((acc, it) => acc + it.student_count, 0),
       average_rating: Number(weightedRating.toFixed(1)),
       review_count: totalReviews,
@@ -226,12 +238,13 @@ function getScopedOnlineListingsByUniversitySlug(universitySlug: string): Course
         course,
         min_fees: row.fees,
         university_count: 1,
+        university_names: [uni.name],
         student_count: 100 + (hashCode(row.id) % 4901),
         average_rating: Number(rating?.rating ?? 0),
         review_count: rating?.review_count ?? 0,
       } satisfies CourseListing;
     })
-    .filter((item): item is CourseListing => Boolean(item))
+    .filter((item): item is NonNullable<typeof item> => Boolean(item))
     .sort((a, b) => a.course.name.localeCompare(b.course.name));
 }
 
@@ -250,6 +263,7 @@ function applyFiltersToList(list: CourseListing[], filters: CourseFilters) {
   return list.filter((item) => {
     if (filters.sector && item.course.sector?.slug !== filters.sector) return false;
     if (normalizedMode && normalizeModeSlug(item.course.mode?.name ?? "") !== normalizedMode) return false;
+    if (filters.course && item.course.slug !== filters.course) return false;
     if (levelFilter && allowLevelFilter) {
       const courseMode = normalizeModeSlug(item.course.mode?.name ?? "");
       if (!allowedLevelModes.has(courseMode)) return false;
@@ -258,10 +272,7 @@ function applyFiltersToList(list: CourseListing[], filters: CourseFilters) {
     }
     if (filters.duration && !item.course.duration.toLowerCase().includes(filters.duration.toLowerCase())) return false;
     if (allowedCourseIds && !allowedCourseIds.has(item.course.id)) return false;
-    if (filters.search) {
-      const haystack = `${item.course.name} ${item.course.description}`.toLowerCase();
-      if (!haystack.includes(filters.search.toLowerCase())) return false;
-    }
+    if (filters.search && !matchesListingSearch(item, filters.search)) return false;
     return true;
   });
 }
@@ -280,7 +291,7 @@ export async function getCourses(): Promise<Course[]> {
   });
 
   if (error || !data) return mockData.courses;
-  return data;
+  return data.map(normalizeCourseRecord);
 }
 
 export async function getCourseBySlug(slug: string) {
@@ -293,7 +304,7 @@ export async function getCourseBySlug(slug: string) {
     .eq("slug", slug)
     .maybeSingle();
 
-  return data;
+  return data ? normalizeCourseRecord(data as Course) : null;
 }
 
 export async function getCourseSectors() {
@@ -347,6 +358,7 @@ export async function getCourseListings(filters: CourseFilters = {}): Promise<Co
   const filtered = list.filter((item) => {
     if (filters.sector && item.course.sector?.slug !== filters.sector) return false;
     if (normalizedMode && normalizeModeSlug(item.course.mode?.name ?? "") !== normalizedMode) return false;
+    if (filters.course && item.course.slug !== filters.course) return false;
     if (levelFilter && allowLevelFilter) {
       const courseMode = normalizeModeSlug(item.course.mode?.name ?? "");
       if (!allowedLevelModes.has(courseMode)) return false;
@@ -355,10 +367,7 @@ export async function getCourseListings(filters: CourseFilters = {}): Promise<Co
     }
     if (filters.duration && !item.course.duration.toLowerCase().includes(filters.duration.toLowerCase())) return false;
     if (allowedCourseIds && !allowedCourseIds.has(item.course.id)) return false;
-    if (filters.search) {
-      const haystack = `${item.course.name} ${item.course.description}`.toLowerCase();
-      if (!haystack.includes(filters.search.toLowerCase())) return false;
-    }
+    if (filters.search && !matchesListingSearch(item, filters.search)) return false;
     return true;
   });
 
@@ -399,7 +408,7 @@ export async function getCourseListings(filters: CourseFilters = {}): Promise<Co
 
 async function getCourseListingsFromDb(): Promise<CourseListing[]> {
   const supabase = createClient();
-  const [coursesResp, linksResp, studentsResp, ratingsResp] = await Promise.all([
+  const [coursesResp, linksResp, studentsResp, ratingsResp, universitiesResp] = await Promise.all([
     fetchAllRows<Course>(async (from, to) => {
       const { data: rows, error } = await supabase
         .from("courses")
@@ -428,21 +437,32 @@ async function getCourseListingsFromDb(): Promise<CourseListing[]> {
         .range(from, to);
       return { data: rows, error };
     }),
+    fetchAllRows<{ id: string; name: string }>(async (from, to) => {
+      const { data: rows, error } = await supabase.from("universities").select("id, name").range(from, to);
+      return { data: rows, error };
+    }),
   ]);
 
   if (!coursesResp.data || !linksResp.data) return getMockCourseListings();
 
+  const universityNameById = new Map((universitiesResp.data ?? []).map((item) => [item.id, item.name]));
+
   return coursesResp.data.map((course) => {
+    const normalizedCourse = normalizeCourseRecord(course);
     const courseLinks = linksResp.data!.filter((row) => row.course_id === course.id);
     const minFees = courseLinks.length ? Math.min(...courseLinks.map((row) => row.fees)) : 0;
     const studentCount =
       studentsResp.data?.filter((row) => row.course_id === course.id).reduce((acc, row) => acc + row.student_count, 0) ?? 0;
     const ratingRow = ratingsResp.data?.find((row) => row.course_id === course.id);
+    const universityNames = Array.from(
+      new Set(courseLinks.map((row) => universityNameById.get(row.university_id)).filter((value): value is string => Boolean(value))),
+    );
 
     return {
-      course,
+      course: normalizedCourse,
       min_fees: minFees,
       university_count: courseLinks.length,
+      university_names: universityNames,
       student_count: studentCount,
       average_rating: Number(ratingRow?.rating ?? 0),
       review_count: ratingRow?.review_count ?? 0,
@@ -456,6 +476,7 @@ export async function getUniversityCourseLinks(courseId: string): Promise<Univer
       .filter((item) => item.course_id === courseId)
       .map((item) => ({
         ...item,
+        course: item.course ? normalizeCourseRecord(item.course) : item.course,
         university: mockData.universities.find((u) => u.id === item.university_id),
       }));
   }
@@ -467,7 +488,10 @@ export async function getUniversityCourseLinks(courseId: string): Promise<Univer
     .eq("course_id", courseId)
     .order("fees", { ascending: true });
 
-  return data ?? [];
+  return (data ?? []).map((item) => ({
+    ...item,
+    course: item.course ? normalizeCourseRecord(item.course as Course) : item.course,
+  }));
 }
 
 export async function getUniversityCourseAssignments(): Promise<UniversityCourse[]> {
@@ -475,7 +499,7 @@ export async function getUniversityCourseAssignments(): Promise<UniversityCourse
     return mockData.universityCourses.map((item) => ({
       ...item,
       university: mockData.universities.find((u) => u.id === item.university_id),
-      course: mockData.courses.find((c) => c.id === item.course_id),
+      course: normalizeCourseRecord(mockData.courses.find((c) => c.id === item.course_id) ?? item.course!),
     }));
   }
 
@@ -485,7 +509,10 @@ export async function getUniversityCourseAssignments(): Promise<UniversityCourse
     .select("*, university:universities(*), course:courses(*)")
     .order("university_id", { ascending: true });
 
-  return data ?? [];
+  return (data ?? []).map((item) => ({
+    ...item,
+    course: item.course ? normalizeCourseRecord(item.course as Course) : item.course,
+  }));
 }
 
 export async function getCourseEnrollmentCount(courseId: string): Promise<number> {

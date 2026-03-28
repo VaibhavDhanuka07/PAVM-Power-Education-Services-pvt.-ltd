@@ -1,4 +1,5 @@
 import { Blog, Course, CourseListing, CourseSector, EducationMode, Rating, University, UniversityCourse, UniversityListing } from "@/lib/types";
+import { canonicalizeCourseName } from "@/lib/course-search";
 import { slugify } from "@/lib/utils";
 import { skillBaseCoursesFromPdf } from "@/lib/data/skill-base-courses";
 
@@ -223,14 +224,14 @@ const regularMode = modes.find((mode) => mode.name === "Regular")!;
 
 const onlineCourseDefs = [
   { name: "BBA", slug: "bba", duration: "3 years", sectorSlug: "management", description: "Undergraduate business program with fundamentals in management, marketing, and operations." },
-  { name: "BCom Hons", slug: "bcom-hons", duration: "3 years", sectorSlug: "banking-and-finance", description: "Advanced commerce curriculum in accounting, taxation, and finance." },
+  { name: "B.Com. (Honours)", slug: "bcom-hons", duration: "3 years", sectorSlug: "banking-and-finance", description: "Advanced commerce curriculum in accounting, taxation, and finance." },
   { name: "BA Journalism and Mass Communication", slug: "ba-journalism-and-mass-communication", duration: "3 years", sectorSlug: "media", description: "UG media program focused on reporting, editing, and digital communication." },
   { name: "BCA", slug: "bca", duration: "3 years", sectorSlug: "computing-and-information-technology", description: "Undergraduate computing program in programming, databases, and software development." },
   { name: "MBA", slug: "mba", duration: "2 years", sectorSlug: "management", description: "Postgraduate management degree with career specializations." },
   { name: "MA English", slug: "ma-english", duration: "2 years", sectorSlug: "language-studies", description: "Postgraduate English studies program for language, literature, and communication." },
   { name: "MCA", slug: "mca", duration: "2 years", sectorSlug: "computing-and-information-technology", description: "Advanced postgraduate computing and application development program." },
   { name: "BCom", slug: "bcom", duration: "3 years", sectorSlug: "banking-and-finance", description: "Commerce degree covering accounting, business law, and financial systems." },
-  { name: "MSc Mathematics", slug: "msc-mathematics", duration: "2 years", sectorSlug: "management", description: "Postgraduate mathematics program with applied and theoretical focus." },
+  { name: "M.Sc. Mathematics", slug: "msc-mathematics", duration: "2 years", sectorSlug: "management", description: "Postgraduate mathematics program with applied and theoretical focus." },
   { name: "MA Journalism and Mass Communication", slug: "ma-journalism-and-mass-communication", duration: "2 years", sectorSlug: "media", description: "PG media and journalism program with communication strategy and content production." },
   { name: "MCom", slug: "mcom", duration: "2 years", sectorSlug: "banking-and-finance", description: "Postgraduate commerce program in accounting, taxation, and financial analysis." },
   { name: "MA", slug: "ma", duration: "2 years", sectorSlug: "language-studies", description: "Postgraduate arts program focused on advanced humanities and social sciences." },
@@ -307,7 +308,7 @@ const distanceCourseDefs = [
   { name: "MA History", slug: "ma-history-distance", duration: "2 years", sectorSlug: "language-studies", description: "Distance MA History program with historical methods and interpretation." },
   { name: "MA Economics", slug: "ma-economics-distance", duration: "2 years", sectorSlug: "banking-and-finance", description: "Distance MA Economics program in policy, macroeconomics, and analytics." },
   { name: "MCom", slug: "mcom-distance", duration: "2 years", sectorSlug: "banking-and-finance", description: "Distance MCom program in accounting, finance, and commerce strategy." },
-  { name: "MSc Mathematics", slug: "msc-mathematics-distance", duration: "2 years", sectorSlug: "management", description: "Distance MSc Mathematics program with pure and applied mathematics." },
+  { name: "M.Sc. Mathematics", slug: "msc-mathematics-distance", duration: "2 years", sectorSlug: "management", description: "Distance M.Sc. Mathematics program with pure and applied mathematics." },
   { name: "MBA", slug: "mba-distance", duration: "2 years", sectorSlug: "management", description: "Distance MBA program for management leadership and business strategy." },
   { name: "MCA", slug: "mca-distance", duration: "2 years", sectorSlug: "computing-and-information-technology", description: "Distance MCA program in software engineering and application development." },
   { name: "MSW", slug: "msw-distance", duration: "2 years", sectorSlug: "management", description: "Distance MSW program focused on social work practice and community development." },
@@ -328,7 +329,7 @@ const regularCourseDefs = [
   { name: "DMLT", slug: "dmlt-regular", duration: "2 years", sectorSlug: "mental-health", description: "Regular diploma in medical laboratory technology." },
   { name: "BMLT", slug: "bmlt-regular", duration: "3 years", sectorSlug: "mental-health", description: "Regular bachelor program in medical laboratory technology." },
   { name: "BPT", slug: "bpt-regular", duration: "4 years", sectorSlug: "sports", description: "Regular bachelor of physiotherapy program." },
-  { name: "B.Sc", slug: "b-sc-regular", duration: "4/3 years", sectorSlug: "technical-training", description: "Regular bachelor of science pathway across multiple science branches." },
+  { name: "B.Sc.", slug: "b-sc-regular", duration: "4/3 years", sectorSlug: "technical-training", description: "Regular bachelor of science pathway across multiple science branches." },
   { name: "M.Sc", slug: "m-sc-regular", duration: "2 years", sectorSlug: "technical-training", description: "Regular master of science program across major disciplines." },
   { name: "DCA", slug: "dca-regular", duration: "1 year", sectorSlug: "computing-and-information-technology", description: "Regular diploma in computer applications." },
   { name: "BCA", slug: "bca-regular", duration: "4 years", sectorSlug: "computing-and-information-technology", description: "Regular bachelor of computer applications program." },
@@ -734,6 +735,30 @@ function makeDuration(mode: string, variant: number) {
 }
 
 const courses: Course[] = [];
+
+function pushCourseRecord(
+  item: {
+    name: string;
+    slug: string;
+    description: string;
+    duration: string;
+  },
+  sector: CourseSector,
+  mode: EducationMode,
+) {
+  courses.push({
+    id: `c-${courses.length + 1}`,
+    name: canonicalizeCourseName(item.name),
+    slug: item.slug,
+    description: item.description,
+    duration: item.duration,
+    sector_id: sector.id,
+    mode_id: mode.id,
+    sector,
+    mode,
+  });
+}
+
 for (const sector of sectors) {
   for (const mode of modes) {
     if (
@@ -744,7 +769,7 @@ for (const sector of sectors) {
       mode.name === "Regular"
     ) continue;
     for (let v = 0; v < 6; v += 1) {
-      const name = makeCourseName(mode.name, v, sector.name);
+      const name = canonicalizeCourseName(makeCourseName(mode.name, v, sector.name));
       const slug = slugify(`${sector.slug}-${mode.name}-${v + 1}-${name}`);
       courses.push({
         id: `c-${courses.length + 1}`,
@@ -764,81 +789,31 @@ for (const sector of sectors) {
 for (const item of regularCourseDefs) {
   const sector = sectors.find((s) => s.slug === item.sectorSlug);
   if (!sector) continue;
-  courses.push({
-    id: `c-${courses.length + 1}`,
-    name: item.name,
-    slug: item.slug,
-    description: item.description,
-    duration: item.duration,
-    sector_id: sector.id,
-    mode_id: regularMode.id,
-    sector,
-    mode: regularMode,
-  });
+  pushCourseRecord(item, sector, regularMode);
 }
 
 for (const item of onlineCourseDefs) {
   const sector = sectors.find((s) => s.slug === item.sectorSlug);
   if (!sector) continue;
-  courses.push({
-    id: `c-${courses.length + 1}`,
-    name: item.name,
-    slug: item.slug,
-    description: item.description,
-    duration: item.duration,
-    sector_id: sector.id,
-    mode_id: onlineMode.id,
-    sector,
-    mode: onlineMode,
-  });
+  pushCourseRecord(item, sector, onlineMode);
 }
 
 for (const item of distanceCourseDefs) {
   const sector = sectors.find((s) => s.slug === item.sectorSlug);
   if (!sector) continue;
-  courses.push({
-    id: `c-${courses.length + 1}`,
-    name: item.name,
-    slug: item.slug,
-    description: item.description,
-    duration: item.duration,
-    sector_id: sector.id,
-    mode_id: distanceMode.id,
-    sector,
-    mode: distanceMode,
-  });
+  pushCourseRecord(item, sector, distanceMode);
 }
 
 for (const item of allVocationalCourseDefs) {
   const sector = sectors.find((s) => s.slug === item.sectorSlug);
   if (!sector) continue;
-  courses.push({
-    id: `c-${courses.length + 1}`,
-    name: item.name,
-    slug: item.slug,
-    description: item.description,
-    duration: item.duration,
-    sector_id: sector.id,
-    mode_id: vocationalMode.id,
-    sector,
-    mode: vocationalMode,
-  });
+  pushCourseRecord(item, sector, vocationalMode);
 }
 
 for (const item of skillCourseDefs) {
   const sector = sectors.find((s) => s.slug === item.sectorSlug);
   if (!sector) continue;
-  courses.push({
-    id: `c-${courses.length + 1}`,
-    name: item.name,
-    slug: item.slug,
-    description: item.description,
-    duration: item.duration,
-    sector_id: sector.id,
-    mode_id: skillMode.id,
-    sector,
-    mode: skillMode,
-  });
+  pushCourseRecord(item, sector, skillMode);
 }
 
 const vocationalCatalogByUniversity: Record<string, Record<string, { fees: number; duration: string }>> = {
@@ -1031,6 +1006,9 @@ export function getMockCourseListings(): CourseListing[] {
       course,
       min_fees: linked.length ? Math.min(...linked.map((item) => item.fees)) : 0,
       university_count: linked.length,
+      university_names: Array.from(
+        new Set(linked.map((item) => item.university?.name ?? universities.find((u) => u.id === item.university_id)?.name).filter(Boolean)),
+      ) as string[],
       student_count,
       average_rating: rating?.rating ?? 0,
       review_count: rating?.review_count ?? 0,

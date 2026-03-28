@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
 
+function isSupabaseEnabledByEnv() {
+  return process.env.NEXT_PUBLIC_SUPABASE_ENABLED !== "false";
+}
+
 export function createClient() {
   const cookieStore = cookies();
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -14,7 +18,6 @@ export function createClient() {
     fetch(input, {
       ...init,
       cache: "no-store",
-      next: { revalidate: 0 },
     });
 
   return createServerClient(url, anonKey, {
@@ -36,7 +39,7 @@ export function createClient() {
 }
 
 export function isSupabaseConfigured() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  return Boolean(isSupabaseEnabledByEnv() && process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
 

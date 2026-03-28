@@ -1,5 +1,6 @@
-﻿/** @type {import('next').NextConfig} */
-const nextConfig = {
+import { PHASE_DEVELOPMENT_SERVER } from "next/constants.js";
+
+const baseConfig = {
   images: {
     remotePatterns: [
       {
@@ -26,4 +27,11 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default function nextConfig(phase) {
+  return {
+    ...baseConfig,
+    // Keep dev output separate from production builds so a local `next build`
+    // cannot invalidate the currently running dev asset manifest.
+    distDir: phase === PHASE_DEVELOPMENT_SERVER ? ".next-dev" : ".next",
+  };
+}

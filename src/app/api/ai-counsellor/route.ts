@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { scoreCourseSearchMatch, tokenizeCourseQuery } from "@/lib/course-search";
 import { getCourseListings } from "@/lib/queries/courses";
 import { getUniversities } from "@/lib/queries/universities";
 import { formatCourseFee, slugify } from "@/lib/utils";
@@ -63,18 +64,25 @@ function detectMode(query: string): (typeof MODE_SLUGS)[number] | undefined {
 }
 
 function tokenize(query: string) {
-  return query
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .split(/\s+/)
-    .filter((token) => token && token.length > 2 && !STOPWORDS.has(token));
+  return tokenizeCourseQuery(query).filter((token) => !STOPWORDS.has(token));
 }
 
 function scoreText(haystack: string, tokens: string[]) {
   if (!tokens.length) return 0;
   const h = haystack.toLowerCase();
+  const haystackTokens = new Set(
+    h
+      .replace(/[^a-z0-9\s-]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean),
+  );
   let score = 0;
   for (const token of tokens) {
+    if (token.length <= 3) {
+      if (haystackTokens.has(token)) score += 1;
+      continue;
+    }
+
     if (h.includes(token)) score += token.length > 5 ? 2 : 1;
   }
   return score;
@@ -108,8 +116,16 @@ function isEducationScoped(query: string) {
     "bba",
     "bca",
     "mca",
+    "b.com",
     "bcom",
+    "m.a",
+    "ma",
+    "m.sc",
+    "msc",
     "mcom",
+    "chemistry",
+    "physics",
+    "biology",
     "counselling",
   ];
   return keywords.some((keyword) => q.includes(keyword));
@@ -142,10 +158,7 @@ async function buildDynamicContext(message: string) {
 
   const matchedCourses = courses
     .map((item) => {
-      const score = scoreText(
-        `${item.course.name} ${item.course.description} ${item.course.sector?.name ?? ""} ${item.course.mode?.name ?? ""}`,
-        tokens,
-      );
+      const score = scoreCourseSearchMatch(item.course, message, { universityNames: item.university_names });
       return { item, score };
     })
     .filter((entry) => entry.score > 0 || tokens.length === 0)
@@ -282,4 +295,3 @@ Rules:
     });
   }
 }
-

@@ -11,6 +11,7 @@
 
 # next.js
 /.next/
+/.next-dev/
 /out/
 
 # production
@@ -19,6 +20,7 @@
 # misc
 .DS_Store
 *.pem
+__pycache__/
 
 # debug
 npm-debug.log*

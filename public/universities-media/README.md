@@ -30,17 +30,22 @@ How rendering works
 3. If still empty, it falls back to the university logo so the layout never breaks.
 4. Files containing `hero` in their name are prioritized first.
 
-Auto-generate premium placeholders
-----------------------------------
+Auto-generate original in-house visuals
+---------------------------------------
 
-You can generate distinct university-wise cinematic placeholder images for every university with:
+You can generate distinct university-wise raster campus visuals for every university with:
 
 - `npm run media:generate`
 
 This creates:
 
-- `00-cinematic-hero.svg`
-- `00-cinematic-1.svg` to `00-cinematic-6.svg`
+- `00-cinematic-hero.jpg`
+- `00-cinematic-1.jpg` to `00-cinematic-6.jpg`
+
+Requirements:
+
+- Python 3
+- Pillow (`pip install pillow`)
 
 Recommended quality
 -------------------

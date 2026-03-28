@@ -63,5 +63,8 @@ function removeDirIfExists(relativePath) {
 }
 
 killPort(port);
-if (cleanNext) removeDirIfExists(".next");
+if (cleanNext) {
+  removeDirIfExists(".next");
+  removeDirIfExists(".next-dev");
+}
 if (cleanCache) removeDirIfExists("node_modules/.cache");
